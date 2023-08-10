@@ -11,6 +11,18 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import LoginScreen from "screens/LoginScreen";
+import HomeScreen from "screens/HomeScreen";
+
+export type RootStackParamList = {
+  Home: undefined;
+  Login: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
 WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
@@ -52,17 +64,27 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text>
-        Open up App.tsx to start working on your app!
-        {JSON.stringify(userInfo, null, 2)}
-      </Text>
-      <Button
-        title="sign in with google"
-        onPress={() => promptAsync()}
-      ></Button>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Login"
+          options={{ headerShown: false }}
+          component={LoginScreen}
+        />
+        <Stack.Screen name="Home" component={HomeScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+    // <View style={styles.container}>
+    //   <Text>
+    //     Open up App.tsx to start working on your app!
+    //     {JSON.stringify(userInfo, null, 2)}
+    //   </Text>
+    //   <Button
+    //     title="sign in with google"
+    //     onPress={() => promptAsync()}
+    //   ></Button>
+    //   <StatusBar style="auto" />
+    // </View>
   );
 }
 
