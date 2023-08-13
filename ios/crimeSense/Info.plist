@@ -27,12 +27,21 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>crimesense</string>
           <string>com.jamesphalanx.crimeSense</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+crimesense</string>
         </array>
       </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>

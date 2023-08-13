@@ -17,7 +17,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.jamesphalanx.crimeSense"
+      "bundleIdentifier": "com.jamesphalanx.crimeSense",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,13 +31,28 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "build": {
+        "babel": {
+          "include": ["@ui-kitten/components"]
+        }
+      }
     },
     "extra": {
       "eas": {
         "projectId": "a492db84-585a-4cf2-a75b-4f3dc1bb58ba"
       }
     },
-    "scheme": "crimesense"
+    "scheme": "crimesense",
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "flipper": true
+          }
+        }
+      ]
+    ]
   }
 }

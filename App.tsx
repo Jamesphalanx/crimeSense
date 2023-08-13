@@ -1,53 +1,43 @@
-import { useEffect, useState, useCallback } from "react";
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+//React
+import { useCallback } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import LoginScreen from "screens/LoginScreen";
-import HomeScreen from "screens/HomeScreen";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { User } from "firebase/auth";
-import * as WebBrowser from "expo-web-browser";
+//Font + Splash
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 
-//TS for Navigation stack
-export type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-};
+//UI Kitten
+import * as eva from "@eva-design/eva";
+import {
+  ApplicationProvider,
+  IconRegistry,
+  Layout,
+} from "@ui-kitten/components";
+import { EvaIconsPack } from "@ui-kitten/eva-icons";
+import { default as theme } from "theme.json";
+import { default as mapping } from "./mapping.json";
+
+//Status Bar
+import { StatusBar } from "expo-status-bar";
+
+//Navigation Component
+import { Navigation } from "./components/Navigation";
+
+//Expo
+import Constants from "expo-constants";
+
+//Redux
+import { store } from "./store/store";
+import { Provider } from "react-redux";
 
 //Show Splash screen
 SplashScreen.preventAutoHideAsync();
-
-//Create navigation stack
-const Stack = createNativeStackNavigator<RootStackParamList>();
-
-//Authentication
-WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
   //Use Expo font import function
   const [fontsLoaded, fontError] = useFonts({
     MontserratRegular: require("./assets/fonts/Montserrat-Regular.otf"),
   });
-  const [userInfo, setUserInfo] = useState<User>();
-
-  useEffect(() => {
-    checkLocalUser();
-  }, []);
-
-  const checkLocalUser = async () => {
-    try {
-      const userJSON = await AsyncStorage.getItem("@user");
-      const userData: User = userJSON ? JSON.parse(userJSON) : null;
-      setUserInfo(userData);
-    } catch (error) {
-      alert(error);
-    } finally {
-    }
-  };
 
   //Create a callback for hiding splash screen on FONT LOAD.
   const onLayoutRootView = useCallback(async () => {
@@ -63,17 +53,36 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer onReady={onLayoutRootView}>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="Login"
-          options={{ headerShown: false }}
-          component={LoginScreen}
+    <Provider store={store}>
+      <View style={styles.iosHeader}>
+        <StatusBar
+          style="light"
+          translucent={true}
+          backgroundColor={"transparent"}
         />
-        <Stack.Screen name="Home" component={HomeScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+      </View>
+      <IconRegistry icons={EvaIconsPack} />
+      <ApplicationProvider
+        {...eva}
+        theme={{ ...eva.dark, ...theme }}
+        customMapping={mapping}
+      >
+        <Layout onLayout={onLayoutRootView} style={styles.layout}>
+          <Navigation />
+        </Layout>
+      </ApplicationProvider>
+    </Provider>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  iosHeader: {
+    paddingTop: Platform.OS === "ios" ? Constants.statusBarHeight : 0,
+    height: Platform.OS === "ios" ? Constants.statusBarHeight : 0,
+    backgroundColor: "#1F1F1F",
+  },
+  layout: {
+    flex: 1,
+    flexDirection: "row",
+  },
+});

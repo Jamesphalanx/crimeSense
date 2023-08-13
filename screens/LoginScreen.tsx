@@ -1,69 +1,98 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  KeyboardAvoidingView,
-  TextInput,
-  Pressable,
-} from "react-native";
-import { useEffect, useState } from "react";
+//React
+import { StyleSheet, SafeAreaView } from "react-native";
+import { useEffect } from "react";
+
+//React Navigation Types
+import { NavigationParamList } from "@/Navigation";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+
+//Auth
+import * as Google from "expo-auth-session/providers/google";
 import { auth } from "../firebase";
 import {
   GoogleAuthProvider,
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithCredential,
-  signInWithEmailAndPassword,
 } from "firebase/auth";
-import { useNavigation } from "@react-navigation/native";
-import { RootStackParamList } from "App";
-import { StackNavigationProp } from "@react-navigation/stack";
 
-import * as Google from "expo-auth-session/providers/google";
+//Async
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type LoginScreenProp = StackNavigationProp<RootStackParamList, "Login">;
+//Secure Storage
+import * as SecureStore from "expo-secure-store";
 
-const LoginScreen = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+//UI Kitten
+import { Button, Layout, Icon, IconElement } from "@ui-kitten/components";
 
-  const navigation = useNavigation<LoginScreenProp>();
+//Env Variables
+import { OAUTHIOS, OAUTHAND, OAUTHWEB } from "@env";
+
+//Redux
+import { useDispatch } from "react-redux";
+import { signIn } from "../store/authSlice";
+
+//Async User Type
+export type UserInfo = {
+  //Retrieved from Google
+  uid: string;
+  name: string | null;
+  email: string | null;
+  photoURL: string | null;
+
+  //Saved from Application
+  username?: string | null;
+};
+
+//Screen Prop Type
+type LoginScreenProp = NativeStackScreenProps<NavigationParamList, "Login">;
+
+const LoginScreen = ({ navigation }: LoginScreenProp) => {
+  //Redux
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        navigation.navigate("Home");
-        //TODO: encrypt this data...
-        await AsyncStorage.setItem("@user", JSON.stringify(user));
+        //Set token to secure store
+        const curToken = await user.getIdToken();
+        await SecureStore.setItemAsync("userToken", curToken);
+
+        //Set to redux
+        dispatch(signIn(curToken));
+
+        //TODO: Additional user information should be retrieved from firebase?
+        //If no user exists, we create some additional fields.
+
+        //Save personal information to AsyncStore
+        const curUser: UserInfo = {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        };
+        await AsyncStorage.setItem("@user", JSON.stringify(curUser));
+
+        //TODO: Saving user information to firebase storage
+        //TODO: Create a temporary username
+        //TODO: Add to Redux stores
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const handleSignUp = () => {
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredentials) => {
-        const user = userCredentials.user;
-      })
-      .catch((error) => alert(error.message));
-  };
-
-  const handleLogin = () => {
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredentials) => {
-        const user = userCredentials.user;
-      })
-      .catch((error) => alert(error.message));
-  };
+  //Google Icon
+  const GoogleIcon = (props: any): IconElement => (
+    <Icon {...props} name="google" />
+  );
+  //Facebook Icon
+  const FacebookIcon = (props: any): IconElement => (
+    <Icon {...props} name="facebook" />
+  );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId:
-      "25671504046-sqr2l328ppcl3pfoorsdn195ov59rnrg.apps.googleusercontent.com",
-    androidClientId:
-      "25671504046-4hld6t2bovqpfmt3qrevthjkdr3rnp0k.apps.googleusercontent.com",
-    webClientId:
-      "25671504046-4gjldbg65h4vojd3at3be5qqf5mpkq7o.apps.googleusercontent.com",
+    iosClientId: OAUTHIOS,
+    androidClientId: OAUTHAND,
+    webClientId: OAUTHWEB,
   });
 
   useEffect(() => {
@@ -74,86 +103,31 @@ const LoginScreen = () => {
     }
   }, [response]);
 
+  //TODO: Failed login messages
+  //TODO: Attempted login tries
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          style={styles.input}
-        ></TextInput>
-        <TextInput
-          placeholder="Password"
-          style={styles.input}
-          value={password}
-          onChangeText={(text) => setPassword(text)}
-          secureTextEntry
-        ></TextInput>
-      </View>
-      <View style={styles.buttonContainer}>
-        <Pressable onPress={handleLogin} style={styles.button}>
-          <Text style={styles.buttonText}>Login</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleSignUp}
-          style={[styles.button, styles.buttonOutline]}
+    <SafeAreaView style={{ flex: 1 }}>
+      <Layout
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <Button
+          onPress={() => promptAsync()}
+          size="small"
+          accessoryLeft={GoogleIcon}
+          style={styles.button}
         >
-          <Text style={styles.buttonOutlineText}>Register</Text>
-        </Pressable>
-        <Pressable onPress={() => promptAsync()} style={styles.button}>
-          <Text style={styles.buttonText}>Sign In with Google</Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+          Continue with Google
+        </Button>
+        <Button size="small" accessoryLeft={FacebookIcon} style={styles.button}>
+          Continue with Facebook
+        </Button>
+      </Layout>
+    </SafeAreaView>
   );
 };
 
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: "center",
-    alignItems: "center",
-    flex: 1,
-  },
-  inputContainer: { width: "80%" },
-  input: {
-    backgroundColor: "white",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 5,
-  },
-  buttonContainer: {
-    width: "60%",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
-  button: {
-    backgroundColor: "#0782F9",
-    width: "100%",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 5,
-  },
-  buttonOutline: {
-    backgroundColor: "white",
-    borderColor: "#0782F9",
-    borderWidth: 2,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 16,
-    fontFamily: "MontserratRegular",
-  },
-  buttonOutlineText: {
-    color: "#0782F9",
-    fontWeight: "700",
-    fontSize: 16,
-    fontFamily: "MontserratRegular",
-  },
+  button: { marginBottom: 12, minWidth: 220, justifyContent: "flex-start" },
 });

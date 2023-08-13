@@ -1,16 +1,53 @@
-import { StyleSheet, Text, Pressable, View } from "react-native";
-import React from "react";
+//React Native
+import { StyleSheet, SafeAreaView } from "react-native";
+
+//Firebase auth
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 
-const HomeScreen = () => {
+//UI Kitten
+import { Button, Layout } from "@ui-kitten/components";
+
+//React Navigation Types
+import { NavigationParamList } from "@/Navigation";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+
+//Async
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+//Secure Store
+import * as SecureStore from "expo-secure-store";
+
+//Redux
+import { useDispatch } from "react-redux";
+import { signOff } from "../store/authSlice";
+
+//Navigator Prop
+type HomeScreenProp = NativeStackScreenProps<NavigationParamList, "Home">;
+
+const HomeScreen = ({ navigation }: HomeScreenProp) => {
+  //Redux
+  const dispatch = useDispatch();
+
+  const navigateDetails = async () => {
+    //Firebase signout
+    await signOut(auth);
+    //Remove from Secure store
+    await SecureStore.deleteItemAsync("userToken");
+    //Remvoe Asyncstore when logged off
+    await AsyncStorage.removeItem("@user");
+    //Redux signoff
+    dispatch(signOff());
+  };
+
   return (
-    <View>
-      <Text>Home Screen</Text>
-      <Pressable onPress={async () => await signOut(auth)}>
-        <Text>Logout</Text>
-      </Pressable>
-    </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <Layout
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <Button onPress={navigateDetails}>Logout</Button>
+      </Layout>
+    </SafeAreaView>
   );
 };
 
