@@ -3,4 +3,5 @@ declare module "@env" {
   export const OAUTHIOS: string;
   export const OAUTHWEB: string;
   export const OAUTHAND: string;
+  export const FBAPPID: string;
 }

@@ -1,5 +1,5 @@
 //React
-import { StyleSheet, SafeAreaView } from "react-native";
+import { StyleSheet } from "react-native";
 import { useEffect } from "react";
 
 //React Navigation Types
@@ -7,13 +7,12 @@ import { NavigationParamList } from "@/Navigation";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 //Auth
-import * as Google from "expo-auth-session/providers/google";
 import { auth } from "../firebase";
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithCredential,
-} from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+
+//Storage
+import { db } from "../firebase";
+import { query, collection, addDoc, where, getDocs } from "firebase/firestore";
 
 //Async
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,26 +21,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
 //UI Kitten
-import { Button, Layout, Icon, IconElement } from "@ui-kitten/components";
-
-//Env Variables
-import { OAUTHIOS, OAUTHAND, OAUTHWEB } from "@env";
+import { Layout } from "@ui-kitten/components";
 
 //Redux
 import { useDispatch } from "react-redux";
-import { signIn } from "../store/authSlice";
+import { signIn } from "store/authSlice";
+import { UserState, setUser } from "store/userSlice";
 
-//Async User Type
-export type UserInfo = {
-  //Retrieved from Google
-  uid: string;
-  name: string | null;
-  email: string | null;
-  photoURL: string | null;
-
-  //Saved from Application
-  username?: string | null;
-};
+//Componenets
+import GoogleLogin from "@/auth/GoogleLogin";
+import FacebookLogin from "@/auth/FacebookLogin";
 
 //Screen Prop Type
 type LoginScreenProp = NativeStackScreenProps<NavigationParamList, "Login">;
@@ -51,83 +40,81 @@ const LoginScreen = ({ navigation }: LoginScreenProp) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        //Set token to secure store
-        const curToken = await user.getIdToken();
-        await SecureStore.setItemAsync("userToken", curToken);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        console.log("user", user);
+        if (user) {
+          //Set token to secure store
+          const curToken = await user.getIdToken();
+          await SecureStore.setItemAsync("userToken", curToken);
 
-        //Set to redux
-        dispatch(signIn(curToken));
+          //Set user token into to redux
+          dispatch(signIn(curToken));
 
-        //TODO: Additional user information should be retrieved from firebase?
-        //If no user exists, we create some additional fields.
+          //Check if users exists in user collection
+          const searchUserQuery = query(
+            collection(db, "users"),
+            where("uid", "==", user.uid)
+          );
+          const userSnap = await getDocs(searchUserQuery);
+          //Create user from pull
+          const curUser: UserState = {
+            uid: user.uid,
+            name: user.displayName,
+            email: user.email,
+          };
 
-        //Save personal information to AsyncStore
-        const curUser: UserInfo = {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-        };
-        await AsyncStorage.setItem("@user", JSON.stringify(curUser));
+          //Check if user exists, save user to collection if not.
+          if (userSnap.size === 0) {
+            //TODO: creative Username generator
+            curUser.username = "tempusername";
+            //Save to users.
+            //TODO: better error catching
+            //TODO: success? what should we do?
+            await addDoc(collection(db, "users"), curUser)
+              .then((docRef) => {
+                console.log("Document has been added successfully", docRef.id);
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          } else {
+            userSnap.forEach((doc) => {
+              const firebaseUser = doc.data();
+              curUser.uid = firebaseUser.uid;
+              curUser.name = firebaseUser.name;
+              curUser.email = firebaseUser.email;
+              curUser.username = firebaseUser.username;
+              return false;
+            });
+          }
 
-        //TODO: Saving user information to firebase storage
-        //TODO: Create a temporary username
-        //TODO: Add to Redux stores
+          //Set current logged in user to Async storage...
+          //TODO: Do we need to do this? maybe when the app is loaded in differently? Not sure...
+          await AsyncStorage.setItem("@user", JSON.stringify(curUser));
+
+          //TODO: Add to Redux stores
+          dispatch(setUser(curUser));
+        }
+      },
+      (error) => {
+        console.log(error);
       }
-    });
+    );
     return () => unsubscribe();
   }, []);
-
-  //Google Icon
-  const GoogleIcon = (props: any): IconElement => (
-    <Icon {...props} name="google" />
-  );
-  //Facebook Icon
-  const FacebookIcon = (props: any): IconElement => (
-    <Icon {...props} name="facebook" />
-  );
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: OAUTHIOS,
-    androidClientId: OAUTHAND,
-    webClientId: OAUTHWEB,
-  });
-
-  useEffect(() => {
-    if (response?.type == "success") {
-      const { id_token, access_token } = response.params;
-      const credentials = GoogleAuthProvider.credential(id_token, access_token);
-      signInWithCredential(auth, credentials);
-    }
-  }, [response]);
 
   //TODO: Failed login messages
   //TODO: Attempted login tries
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Layout
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <Button
-          onPress={() => promptAsync()}
-          size="small"
-          accessoryLeft={GoogleIcon}
-          style={styles.button}
-        >
-          Continue with Google
-        </Button>
-        <Button size="small" accessoryLeft={FacebookIcon} style={styles.button}>
-          Continue with Facebook
-        </Button>
-      </Layout>
-    </SafeAreaView>
+    <Layout style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <GoogleLogin />
+      <FacebookLogin />
+    </Layout>
   );
 };
 
 export default LoginScreen;
 
-const styles = StyleSheet.create({
-  button: { marginBottom: 12, minWidth: 220, justifyContent: "flex-start" },
-});
+const styles = StyleSheet.create({});

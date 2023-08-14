@@ -65,11 +65,7 @@ export const Navigation = () => {
 
   return (
     <NavigationContainer>
-      <Navigator
-        screenOptions={{
-          contentStyle: { backgroundColor: "#1F1F1F" },
-        }}
-      >
+      <Navigator>
         {auth.userToken ? (
           <>
             <Screen name="Home" component={HomeScreen} />

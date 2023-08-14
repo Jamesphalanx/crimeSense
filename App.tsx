@@ -8,11 +8,7 @@ import * as SplashScreen from "expo-splash-screen";
 
 //UI Kitten
 import * as eva from "@eva-design/eva";
-import {
-  ApplicationProvider,
-  IconRegistry,
-  Layout,
-} from "@ui-kitten/components";
+import { ApplicationProvider, IconRegistry } from "@ui-kitten/components";
 import { EvaIconsPack } from "@ui-kitten/eva-icons";
 import { default as theme } from "theme.json";
 import { default as mapping } from "./mapping.json";
@@ -29,6 +25,8 @@ import Constants from "expo-constants";
 //Redux
 import { store } from "./store/store";
 import { Provider } from "react-redux";
+
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 //Show Splash screen
 SplashScreen.preventAutoHideAsync();
@@ -67,9 +65,9 @@ export default function App() {
         theme={{ ...eva.dark, ...theme }}
         customMapping={mapping}
       >
-        <Layout onLayout={onLayoutRootView} style={styles.layout}>
+        <SafeAreaProvider onLayout={onLayoutRootView}>
           <Navigation />
-        </Layout>
+        </SafeAreaProvider>
       </ApplicationProvider>
     </Provider>
   );
@@ -80,9 +78,5 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? Constants.statusBarHeight : 0,
     height: Platform.OS === "ios" ? Constants.statusBarHeight : 0,
     backgroundColor: "#1F1F1F",
-  },
-  layout: {
-    flex: 1,
-    flexDirection: "row",
   },
 });

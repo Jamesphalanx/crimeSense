@@ -43,7 +43,7 @@
         "projectId": "a492db84-585a-4cf2-a75b-4f3dc1bb58ba"
       }
     },
-    "scheme": "crimesense",
+    "scheme": ["crimesense", "fb1312920145996740"],
     "plugins": [
       [
         "expo-build-properties",
